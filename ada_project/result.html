@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Analyzer — Output</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06080d;
+      --panel: #0d1117;
+      --panel-2: #111820;
+      --text: #e8f4f0;
+      --muted: #7a9990;
+      --line: #1e2e38;
+      --cyan: #00e5cc;
+      --green: #39e882;
+      --gold: #f5c842;
+      --red: #ff5f7a;
+      --purple: #b97dff;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html, body { max-width: 100%; overflow-x: hidden; }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,204,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,204,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    main {
+      position: relative; z-index: 1;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 72px;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .back { color: var(--cyan); text-decoration: none; font-size: 12px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+    .back:hover { text-decoration: underline; }
+    .ticker-form { display: flex; gap: 8px; flex-shrink: 0; }
+    .ticker-form input {
+      height: 40px; border: 1px solid var(--line); border-radius: 8px;
+      background: #080c10; color: var(--text);
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase; padding: 0 12px; outline: none;
+      width: 120px; transition: border-color .2s;
+    }
+    .ticker-form input:focus { border-color: var(--cyan); }
+    .ticker-form button {
+      height: 40px; padding: 0 16px; border: 0; border-radius: 8px;
+      background: var(--cyan); color: #06080d; font-family: 'Space Mono', monospace;
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
+      text-transform: uppercase; transition: background .15s; white-space: nowrap;
+    }
+    .ticker-form button:hover { background: #33ffe8; }
+
+    /* ── HERO ── */
+    .hero {
+      display: grid; grid-template-columns: 1fr 280px;
+      gap: 16px; margin-bottom: 16px;
+    }
+    .panel {
+      border: 1px solid var(--line); border-radius: 12px;
+      background: rgba(13,17,23,0.96); padding: 20px;
+      min-width: 0;
+    }
+    .kicker {
+      font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(32px, 5vw, 58px); line-height: 0.95;
+      letter-spacing: -1px; margin-bottom: 16px;
+    }
+    .summary { color: var(--muted); font-size: 14px; line-height: 1.8; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat {
+      border: 1px solid var(--line); border-radius: 10px;
+      background: var(--panel-2); padding: 16px 18px;
+    }
+    .stat .label {
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+    .stat .value {
+      font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1;
+    }
+    .stat .sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    .cyan { color: var(--cyan); }
+    .gold { color: var(--gold); }
+    .purple { color: var(--purple); }
+
+    /* ── CHART SECTION ── */
+    .chart-wrap {
+      position: relative; width: 100%; height: 360px; border-radius: 8px; overflow: visible;
+    }
+    canvas#chart { display: block; width: 100%; height: 100%; }
+
+    /* Tooltip */
+    #chartTooltip {
+      position: absolute; pointer-events: none;
+      background: #0d1520; border: 1px solid var(--cyan);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 12px; line-height: 1.7;
+      box-shadow: 0 8px 32px rgba(0,0,0,.6);
+      min-width: 160px; max-width: 200px; display: none; z-index: 20;
+    }
+    #chartTooltip .tt-day { font-weight: 700; color: var(--cyan); margin-bottom: 4px; font-size: 13px; }
+    #chartTooltip .tt-price { color: var(--text); }
+    #chartTooltip .tt-tag { margin-top: 8px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 1px; display: inline-block; }
+    #chartTooltip .tt-buy { background: rgba(255,95,122,.15); color: var(--red); border: 1px solid var(--red); }
+    #chartTooltip .tt-sell { background: rgba(57,232,130,.15); color: var(--green); border: 1px solid var(--green); }
+    #chartTooltip .tt-profit { margin-top: 6px; color: var(--gold); font-size: 11px; }
+
+    /* Callout boxes anchored to buy/sell */
+    .callout {
+      position: absolute; pointer-events: none;
+      background: #0d1520; border-radius: 10px; padding: 10px 14px;
+      font-size: 12px; line-height: 1.6; width: 170px; max-width: 170px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.5); z-index: 10;
+      opacity: 0; transition: opacity .3s; display: none;
+    }
+    .callout.visible { opacity: 1; display: block; }
+    .callout .c-title { font-weight: 700; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+    .callout .c-price { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+    .callout .c-day { color: var(--muted); font-size: 11px; }
+    .callout .c-note { margin-top: 5px; font-size: 10px; color: var(--muted); line-height: 1.5; }
+    #buyCallout { border: 1px solid var(--red); }
+    #buyCallout .c-title { color: var(--red); }
+    #buyCallout .c-price { color: var(--red); }
+    #sellCallout { border: 1px solid var(--green); }
+    #sellCallout .c-title { color: var(--green); }
+    #sellCallout .c-price { color: var(--green); }
+
+    /* ── GRID ── */
+    .grid { display: grid; gap: 18px; }
+    .section-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; gap: 12px;
+    }
+    h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
+    .note { color: var(--muted); font-size: 12px; }
+
+    /* ── STEP CARDS ── */
+    .steps-legend {
+      display: flex; gap: 16px; margin-bottom: 14px; font-size: 11px; flex-wrap: wrap;
+    }
+    .leg { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+    .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .step-filter { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .step-filter button {
+      height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px;
+      background: transparent; color: var(--text); font-family: 'Space Mono', monospace;
+      font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all .15s;
+    }
+    .step-filter button.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,204,.07); }
+
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px;
+    }
+    .steps-grid::-webkit-scrollbar { width: 4px; }
+    .steps-grid::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    .step-card {
+      border: 1px solid var(--line); border-radius: 10px;
+      background: var(--panel-2); padding: 14px 16px;
+      transition: border-color .2s, transform .15s; cursor: default;
+      animation: fadeUp .25s ease both;
+    }
+    .step-card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+    .step-card.split-card { border-left: 3px solid var(--gold); }
+    .step-card.merge-card { border-left: 3px solid var(--purple); }
+
+    .sc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .sc-badge {
+      font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .sc-badge.split { background: rgba(245,200,66,.12); color: var(--gold); border: 1px solid rgba(245,200,66,.3); }
+    .sc-badge.merge { background: rgba(185,125,255,.12); color: var(--purple); border: 1px solid rgba(185,125,255,.3); }
+    .sc-num { font-size: 10px; color: var(--muted); }
+    .sc-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .sc-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+    .sc-profits {
+      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+    .sc-profit-pill {
+      font-size: 10px; padding: 3px 9px; border-radius: 999px; font-weight: 700;
+    }
+    .pill-left { background: rgba(255,95,122,.1); color: var(--red); border: 1px solid rgba(255,95,122,.25); }
+    .pill-right { background: rgba(0,229,204,.1); color: var(--cyan); border: 1px solid rgba(0,229,204,.25); }
+    .pill-cross { background: rgba(57,232,130,.1); color: var(--green); border: 1px solid rgba(57,232,130,.25); }
+    .sc-winner {
+      margin-top: 8px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; padding: 4px 10px; border-radius: 6px; display: inline-block;
+    }
+    .winner-cross { background: rgba(57,232,130,.15); color: var(--green); }
+    .winner-left { background: rgba(255,95,122,.15); color: var(--red); }
+    .winner-right { background: rgba(0,229,204,.15); color: var(--cyan); }
+
+    /* depth indent */
+    .step-card[data-depth="1"] { margin-left: 12px; }
+    .step-card[data-depth="2"] { margin-left: 24px; }
+    .step-card[data-depth="3"] { margin-left: 36px; }
+
+    /* ── COMPLEXITY ── */
+    .complexity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .cplx-box { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 18px; }
+    .cplx-box .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .cplx-box .big { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+    .cplx-box .desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .cplx-bar { height: 6px; border-radius: 3px; margin-top: 12px; }
+
+    /* ── CODE ── */
+    .code-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .code-tab {
+      height: 36px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px;
+      background: transparent; color: var(--muted); font-family: 'Space Mono', monospace;
+      font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 1px;
+      transition: all .15s;
+    }
+    .code-tab:hover { border-color: var(--text); color: var(--text); }
+    .code-tab.active { border-color: var(--gold); background: rgba(245,200,66,.08); color: var(--gold); }
+    pre {
+      max-height: 500px; margin: 0; overflow: auto;
+      border: 1px solid var(--line); border-radius: 10px;
+      background: #060a0e; padding: 20px;
+      color: #c8e8e0; font-size: 12.5px; line-height: 1.6;
+      white-space: pre;
+    }
+    pre::-webkit-scrollbar { width: 5px; height: 5px; }
+    pre::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    /* pre must not cause horizontal scroll */
+    pre { white-space: pre; overflow-x: auto; max-width: 100%; }
+
+    @media (max-width: 1100px) {
+      .hero { grid-template-columns: 1fr 260px; }
+    }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .complexity-grid { grid-template-columns: 1fr; }
+      .cplx-box[style*="span 2"] { grid-column: span 1 !important; }
+      .chart-wrap { height: 260px; }
+      #buyCallout, #sellCallout { display: none !important; }
+    }
+    @media (max-width: 600px) {
+      main { padding: 16px 14px 56px; }
+      h1 { font-size: 28px; }
+      .topbar { gap: 8px; }
+      .ticker-form input { width: 90px; font-size: 14px; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .step-card[data-depth="1"], .step-card[data-depth="2"], .step-card[data-depth="3"] { margin-left: 0; }
+      .stat .value { font-size: 22px; }
+      .chart-wrap { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a class="back" href="/">← Back to Ticker Input</a>
+    <form class="ticker-form" id="tickerForm">
+      <input id="tickerInput" maxlength="12" autocomplete="off" spellcheck="false">
+      <button type="submit">Analyze →</button>
+    </form>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="panel">
+      <div class="kicker">Divide &amp; Conquer · Output</div>
+      <h1 id="title">Loading…</h1>
+      <p class="summary" id="description">Preparing analysis.</p>
+    </div>
+    <div class="panel stats">
+      <div class="stat">
+        <div class="label">Max Profit</div>
+        <div class="value green" id="profit">--</div>
+        <div class="sub" id="profitSub">--</div>
+      </div>
+      <div class="stat">
+        <div class="label">Buy Day</div>
+        <div class="value red" id="buy">--</div>
+        <div class="sub" id="buySub">--</div>
+      </div>
+      <div class="stat">
+        <div class="label">Sell Day</div>
+        <div class="value cyan" id="sell">--</div>
+        <div class="sub" id="sellSub">--</div>
+      </div>
+      <div class="stat">
+        <div class="label">Recursions</div>
+        <div class="value gold" id="divisions">--</div>
+        <div class="sub">divide steps</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="grid">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Visual Representation</h2>
+        <span class="note">Hover for price · B=Buy · S=Sell</span>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <canvas id="chart"></canvas>
+        <!-- Permanent callout boxes -->
+        <div class="callout" id="buyCallout">
+          <div class="c-title">📉 Buy Point</div>
+          <div class="c-price" id="calloutBuyPrice">--</div>
+          <div class="c-day" id="calloutBuyDay">Day --</div>
+          <div class="c-note">Lowest price in the left half — algorithm picks this as the entry point.</div>
+        </div>
+        <div class="callout" id="sellCallout">
+          <div class="c-title">📈 Sell Point</div>
+          <div class="c-price" id="calloutSellPrice">--</div>
+          <div class="c-day" id="calloutSellDay">Day --</div>
+          <div class="c-note" id="calloutProfit">Profit: --</div>
+        </div>
+        <div id="chartTooltip">
+          <div class="tt-day" id="ttDay"></div>
+          <div class="tt-price" id="ttPrice"></div>
+          <div id="ttTag"></div>
+          <div class="tt-profit" id="ttProfit"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVIDE STEPS -->
+    <div class="panel">
+      <div class="section-head">
+        <h2>Divide &amp; Conquer Steps</h2>
+        <span class="note" id="stepNote">-- steps</span>
+      </div>
+      <div class="steps-legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--gold)"></div> SPLIT — recursion divides the range</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--purple)"></div> MERGE — compare left / right / cross profits</div>
+      </div>
+      <div class="step-filter" id="stepFilter">
+        <button class="active" data-filter="all">All Steps</button>
+        <button data-filter="split">Splits Only</button>
+        <button data-filter="merge">Merges Only</button>
+      </div>
+      <div class="steps-grid" id="stepsGrid"></div>
+    </div>
+
+    <!-- COMPLEXITY -->
+    <div class="panel">
+      <div class="section-head">
+        <h2>Complexity Analysis</h2>
+        <span class="note">n = 30 data points</span>
+      </div>
+      <div class="complexity-grid">
+        <div class="cplx-box">
+          <div class="label">Divide &amp; Conquer</div>
+          <div class="big cyan">O(n log n)</div>
+          <div class="desc">n=30 → ~149 operations. Each level halves the problem; merge takes O(n) per level, log n levels total.</div>
+          <div class="cplx-bar" style="background: linear-gradient(90deg, var(--cyan), #004d44); width: 35%;"></div>
+        </div>
+        <div class="cplx-box">
+          <div class="label">Brute Force</div>
+          <div class="big red">O(n²)</div>
+          <div class="desc">n=30 → 870 comparisons. Checks every possible buy-sell pair — gets unmanageable for large datasets.</div>
+          <div class="cplx-bar" style="background: linear-gradient(90deg, var(--red), #500020); width: 100%;"></div>
+        </div>
+        <div class="cplx-box" style="grid-column: span 2;">
+          <div class="label">Your Run</div>
+          <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; margin-top:4px;">
+            <div>
+              <div class="big gold" id="cplxSteps">--</div>
+              <div class="desc">recursive calls made</div>
+            </div>
+            <div>
+              <div class="big purple">~870</div>
+              <div class="desc">brute-force would need</div>
+            </div>
+            <div>
+              <div class="big green" id="cplxSaving">--</div>
+              <div class="desc">fewer operations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CODE VIEWER -->
+    <div class="panel">
+      <div class="section-head">
+        <h2>Complete Code</h2>
+        <span class="note" id="codeFile">app.py</span>
+      </div>
+      <div class="code-tabs">
+        <button class="code-tab active" data-file="backend">Backend (app.py)</button>
+        <button class="code-tab" data-file="home">Home Page</button>
+        <button class="code-tab" data-file="output">Output Page</button>
+      </div>
+      <pre><code id="codeBlock">Loading…</code></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+  const canvas = document.getElementById("chart");
+  const ctx = canvas.getContext("2d");
+  const wrap = document.getElementById("chartWrap");
+  const tooltip = document.getElementById("chartTooltip");
+  const buyCallout = document.getElementById("buyCallout");
+  const sellCallout = document.getElementById("sellCallout");
+  let currentData = null;
+  let chartCoords = [];   // {x, y, price, day} for each data point
+  let buyX = 0, buyY = 0, sellX = 0, sellY = 0;
+
+  function getTicker() {
+    const p = new URLSearchParams(window.location.search);
+    return (p.get("ticker") || "DEMO").replace(/[^A-Za-z0-9.-]/g, "").toUpperCase() || "DEMO";
+  }
+
+  function rs(v) { return `Rs.${v}`; }
+
+  async function loadAnalysis() {
+    const ticker = getTicker();
+    document.getElementById("tickerInput").value = ticker;
+    const res = await fetch(`/api/analyze/${encodeURIComponent(ticker)}`);
+    currentData = await res.json();
+
+    document.getElementById("title").textContent = `${currentData.ticker} — Stock Analysis`;
+    document.getElementById("description").textContent = currentData.description;
+    document.getElementById("profit").textContent = rs(currentData.profit);
+    document.getElementById("profitSub").textContent = `${rs(currentData.buy_price)} → ${rs(currentData.sell_price)}`;
+    document.getElementById("buy").textContent = `Day ${currentData.buy_day + 1}`;
+    document.getElementById("buySub").textContent = `Price: ${rs(currentData.buy_price)}`;
+    document.getElementById("sell").textContent = `Day ${currentData.sell_day + 1}`;
+    document.getElementById("sellSub").textContent = `Price: ${rs(currentData.sell_price)}`;
+    document.getElementById("divisions").textContent = currentData.step_count;
+
+    // Complexity
+    document.getElementById("cplxSteps").textContent = currentData.step_count;
+    const saving = 870 - currentData.step_count;
+    document.getElementById("cplxSaving").textContent = saving > 0 ? `${saving} fewer` : "similar";
+
+    // Callouts
+    document.getElementById("calloutBuyPrice").textContent = rs(currentData.buy_price);
+    document.getElementById("calloutBuyDay").textContent = `Day ${currentData.buy_day + 1} of 30`;
+    document.getElementById("calloutSellPrice").textContent = rs(currentData.sell_price);
+    document.getElementById("calloutSellDay").textContent = `Day ${currentData.sell_day + 1} of 30`;
+    document.getElementById("calloutProfit").textContent = `Profit: +${rs(currentData.profit)} (${Math.round((currentData.profit/currentData.buy_price)*100)}% gain)`;
+
+    document.getElementById("stepNote").textContent = `${currentData.step_count} total steps`;
+    document.getElementById("stepsGrid").innerHTML = "";
+
+    drawChart();
+    renderSteps(currentData.steps);
+  }
+
+  function setupCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: rect.width, h: rect.height };
+  }
+
+  function computeLayout(w, h) {
+    const pad = { top: 32, right: 28, bottom: 44, left: 64 };
+    const cw = w - pad.left - pad.right;
+    const ch = h - pad.top - pad.bottom;
+    const prices = currentData.prices;
+    const minP = Math.min(...prices) - 8;
+    const maxP = Math.max(...prices) + 8;
+    const xOf = i => pad.left + (cw / (prices.length - 1)) * i;
+    const yOf = p => pad.top + ((maxP - p) / (maxP - minP)) * ch;
+    return { pad, cw, ch, minP, maxP, xOf, yOf };
+  }
+
+  function drawChart() {
+    if (!currentData) return;
+    const { w, h } = setupCanvas();
+    const prices = currentData.prices;
+    const { pad, minP, maxP, xOf, yOf } = computeLayout(w, h);
+
+    chartCoords = prices.map((p, i) => ({ x: xOf(i), y: yOf(p), price: p, day: i }));
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid lines
+    for (let i = 0; i <= 4; i++) {
+      const gy = pad.top + ((h - pad.top - pad.bottom) / 4) * i;
+      const lv = Math.round(maxP - ((maxP - minP) / 4) * i);
+      ctx.strokeStyle = "rgba(238,247,245,0.06)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(w - pad.right, gy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#7a9990"; ctx.font = "11px 'Space Mono', monospace";
+      ctx.textAlign = "right"; ctx.fillText(rs(lv), pad.left - 10, gy + 4);
+    }
+
+    // Mid-line (division reference)
+    const mid = Math.floor((prices.length - 1) / 2);
+    const midX = xOf(mid);
+    ctx.strokeStyle = "rgba(245,200,66,0.2)";
+    ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(midX, pad.top - 8); ctx.lineTo(midX, h - pad.bottom + 8); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(245,200,66,0.6)"; ctx.font = "10px 'Space Mono', monospace";
+    ctx.textAlign = "center"; ctx.fillText("MID", midX, pad.top - 12);
+
+    // Gradient fill
+    const grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+    grad.addColorStop(0, "rgba(0,229,204,0.18)");
+    grad.addColorStop(1, "rgba(0,229,204,0)");
+    ctx.beginPath();
+    ctx.moveTo(xOf(0), yOf(prices[0]));
+    prices.forEach((p, i) => ctx.lineTo(xOf(i), yOf(p)));
+    ctx.lineTo(xOf(prices.length - 1), h - pad.bottom);
+    ctx.lineTo(xOf(0), h - pad.bottom);
+    ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+    // Price line
+    ctx.beginPath();
+    prices.forEach((p, i) => i === 0 ? ctx.moveTo(xOf(i), yOf(p)) : ctx.lineTo(xOf(i), yOf(p)));
+    ctx.strokeStyle = "#00e5cc"; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Day labels
+    ctx.fillStyle = "#7a9990"; ctx.font = "10px 'Space Mono', monospace"; ctx.textAlign = "center";
+    [0, 4, 9, 14, 19, 24, 29].forEach(i => ctx.fillText(`D${i+1}`, xOf(i), h - pad.bottom + 18));
+
+    // Markers
+    buyX = xOf(currentData.buy_day); buyY = yOf(currentData.buy_price);
+    sellX = xOf(currentData.sell_day); sellY = yOf(currentData.sell_price);
+
+    drawMarker(buyX, buyY, "#ff5f7a", "B", currentData.buy_day);
+    drawMarker(sellX, sellY, "#39e882", "S", currentData.sell_day);
+
+    // Dashed connector between buy & sell
+    ctx.strokeStyle = "rgba(245,200,66,0.35)";
+    ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(buyX, buyY); ctx.lineTo(sellX, sellY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    positionCallouts(w, h, pad);
+  }
+
+  function drawMarker(mx, my, color, label, dayIdx) {
+    // Glow ring
+    ctx.beginPath(); ctx.arc(mx, my, 16, 0, Math.PI * 2);
+    ctx.fillStyle = color + "22"; ctx.fill();
+    // Circle
+    ctx.beginPath(); ctx.arc(mx, my, 11, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    // Label
+    ctx.fillStyle = "#06080d"; ctx.font = "bold 11px 'Space Mono', monospace";
+    ctx.textAlign = "center"; ctx.fillText(label, mx, my + 4);
+  }
+
+  function positionCallouts(w, h, pad) {
+    const bco = document.getElementById("buyCallout");
+    const sco = document.getElementById("sellCallout");
+    const calloutW = 170;
+    const calloutH = 110;
+
+    bco.style.display = "block"; sco.style.display = "block";
+    bco.classList.add("visible"); sco.classList.add("visible");
+
+    // Buy callout: prefer right of marker, clamp to chart bounds
+    let bLeft = buyX + 18;
+    if (bLeft + calloutW > w - 8) bLeft = buyX - calloutW - 18;
+    bLeft = Math.max(4, bLeft);
+    let bTop = buyY - calloutH - 10;
+    if (bTop < pad.top) bTop = buyY + 20;
+    bco.style.left = `${bLeft}px`; bco.style.right = "auto";
+    bco.style.top = `${bTop}px`;
+
+    // Sell callout: prefer left of marker if near right edge
+    let sLeft = sellX + 18;
+    if (sLeft + calloutW > w - 8) sLeft = sellX - calloutW - 18;
+    sLeft = Math.max(4, sLeft);
+    let sTop = sellY - calloutH - 10;
+    if (sTop < pad.top) sTop = sellY + 20;
+    sco.style.left = `${sLeft}px`; sco.style.right = "auto";
+    sco.style.top = `${sTop}px`;
+  }
+
+  // Hover tooltip
+  canvas.addEventListener("mousemove", e => {
+    if (!currentData || chartCoords.length === 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    let nearest = null, minDist = Infinity;
+    chartCoords.forEach(pt => {
+      const d = Math.abs(pt.x - mx);
+      if (d < minDist) { minDist = d; nearest = pt; }
+    });
+
+    if (!nearest || minDist > 30) { tooltip.style.display = "none"; return; }
+
+    document.getElementById("ttDay").textContent = `Day ${nearest.day + 1}`;
+    document.getElementById("ttPrice").textContent = `Price: ${rs(nearest.price)}`;
+
+    const isBuy = nearest.day === currentData.buy_day;
+    const isSell = nearest.day === currentData.sell_day;
+    const ttTag = document.getElementById("ttTag");
+    const ttProfit = document.getElementById("ttProfit");
+    if (isBuy) {
+      ttTag.innerHTML = '<span class="tt-tag tt-buy">📉 BUY HERE</span>';
+      ttProfit.textContent = `Entry at Rs.${nearest.price}`;
+    } else if (isSell) {
+      ttTag.innerHTML = '<span class="tt-tag tt-sell">📈 SELL HERE</span>';
+      ttProfit.textContent = `+Rs.${currentData.profit} total profit`;
+    } else {
+      ttTag.innerHTML = "";
+      ttProfit.textContent = "";
+    }
+
+    tooltip.style.display = "block";
+    const tx = nearest.x + 20 > rect.width - 200 ? nearest.x - 200 : nearest.x + 20;
+    tooltip.style.left = `${tx}px`;
+    tooltip.style.top = `${Math.max(4, nearest.y - 60)}px`;
+  });
+
+  canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+
+  // ── STEP CARDS ──
+  let allSteps = [];
+  let activeFilter = "all";
+
+  function renderSteps(steps) {
+    allSteps = steps;
+    buildStepCards(steps);
+  }
+
+  function buildStepCards(steps) {
+    const grid = document.getElementById("stepsGrid");
+    grid.innerHTML = "";
+    const filtered = activeFilter === "all" ? steps : steps.filter(s => s.action === activeFilter);
+    filtered.forEach((step, idx) => {
+      const card = document.createElement("div");
+      card.className = `step-card ${step.action}-card`;
+      card.dataset.depth = Math.min(step.depth, 3);
+      card.style.animationDelay = `${idx * 0.03}s`;
+
+      if (step.action === "split") {
+        card.innerHTML = `
+          <div class="sc-header">
+            <span class="sc-badge split">SPLIT</span>
+            <span class="sc-num">#${idx + 1}</span>
+          </div>
+          <div class="sc-title">Days ${step.low+1}–${step.high+1} → halved at Day ${step.mid+1}</div>
+          <div class="sc-desc">Recursion splits this range into LEFT (days ${step.low+1}–${step.mid+1}) and RIGHT (days ${step.mid+1+1}–${step.high+1}). Depth: ${step.depth}.</div>`;
+      } else {
+        const winnerClass = `winner-${step.winner}`;
+        const winnerLabel = step.winner === "cross"
+          ? `✓ Cross wins → Buy D${step.cross_buy+1}, Sell D${step.cross_sell+1}`
+          : step.winner === "left" ? "✓ Left half wins" : "✓ Right half wins";
+        card.innerHTML = `
+          <div class="sc-header">
+            <span class="sc-badge merge">MERGE</span>
+            <span class="sc-num">#${idx + 1}</span>
+          </div>
+          <div class="sc-title">Merge days ${step.low+1}–${step.high+1} (mid: D${step.mid+1})</div>
+          <div class="sc-desc">${step.description}</div>
+          <div class="sc-profits">
+            <span class="sc-profit-pill pill-left">Left: Rs.${step.left_profit}</span>
+            <span class="sc-profit-pill pill-right">Right: Rs.${step.right_profit}</span>
+            <span class="sc-profit-pill pill-cross">Cross: Rs.${step.cross_profit}</span>
+          </div>
+          <div class="sc-winner ${winnerClass}">${winnerLabel}</div>`;
+      }
+      grid.appendChild(card);
+    });
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px;">No steps to show.</div>`;
+    }
+  }
+
+  document.getElementById("stepFilter").addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    activeFilter = btn.dataset.filter;
+    document.querySelectorAll(".step-filter button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    buildStepCards(allSteps);
+  });
+
+  // ── CODE VIEWER ──
+  async function loadCode(fileKey) {
+    document.getElementById("codeBlock").textContent = "Loading…";
+    const res = await fetch(`/api/source/${fileKey}`);
+    const data = await res.json();
+    document.getElementById("codeFile").textContent = data.name;
+    document.getElementById("codeBlock").textContent = data.code;
+  }
+
+  document.getElementById("tickerForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const t = document.getElementById("tickerInput").value.trim() || "DEMO";
+    window.location.href = `/output?ticker=${encodeURIComponent(t)}`;
+  });
+
+  document.querySelectorAll(".code-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".code-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      loadCode(tab.dataset.file);
+    });
+  });
+
+  window.addEventListener("resize", () => { if (currentData) drawChart(); });
+
+  loadAnalysis();
+  loadCode("backend");
+</script>
+</body>
+</html>

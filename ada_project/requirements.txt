@@ -1,0 +1,2 @@
+# No external Python packages required.
+# Uses only Python standard library: http.server, json, threading, webbrowser, random, re, pathlib

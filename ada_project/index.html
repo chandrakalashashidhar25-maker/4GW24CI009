@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Analyzer — Divide & Conquer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06080d;
+      --panel: #0d1117;
+      --panel-2: #121820;
+      --text: #e8f4f0;
+      --muted: #7a9990;
+      --line: #1e2e38;
+      --cyan: #00e5cc;
+      --green: #39e882;
+      --gold: #f5c842;
+      --red: #ff5f7a;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      overflow-x: hidden;
+    }
+    /* animated grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,204,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,204,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    main {
+      position: relative;
+      z-index: 1;
+      width: min(1040px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 64px 0 80px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border: 1px solid var(--cyan);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(44px, 7vw, 84px);
+      line-height: 0.92;
+      letter-spacing: -2px;
+      max-width: 700px;
+      margin-bottom: 24px;
+    }
+    h1 em { font-style: normal; color: var(--cyan); }
+    .lead {
+      max-width: 560px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 48px;
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      align-items: start;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 36px;
+    }
+    .feature {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 18px;
+    }
+    .feature .icon { font-size: 22px; margin-bottom: 10px; }
+    .feature strong { display: block; font-size: 13px; margin-bottom: 6px; }
+    .feature p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .form-panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 28px;
+      position: sticky;
+      top: 24px;
+    }
+    .form-panel label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .form-panel input {
+      width: 100%;
+      height: 54px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #080c10;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 0 16px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-panel input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0,229,204,.12);
+    }
+    .form-panel button {
+      width: 100%;
+      height: 54px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--cyan);
+      color: #06080d;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .form-panel button:hover { background: #33ffe8; transform: translateY(-1px); }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 16px; }
+    .samples {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px;
+    }
+    .sample {
+      padding: 7px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--text);
+      text-decoration: none;
+      font-family: 'Space Mono', monospace;
+      transition: border-color .15s, color .15s;
+    }
+    .sample:hover { border-color: var(--gold); color: var(--gold); }
+    @media (max-width: 800px) {
+      .shell { grid-template-columns: 1fr; }
+      .features { grid-template-columns: 1fr 1fr; }
+      .form-panel { position: static; }
+    }
+    @media (max-width: 500px) {
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="badge">⬡ Divide &amp; Conquer · O(n log n)</div>
+  <h1>Stock Profit<br><em>Analyzer</em></h1>
+  <p class="lead">Enter a ticker to generate 30-day simulated price data and find the optimal buy/sell window using a recursive Divide &amp; Conquer algorithm — with step-by-step visualization.</p>
+
+  <div class="shell">
+    <div>
+      <div class="features">
+        <div class="feature">
+          <div class="icon">📈</div>
+          <strong>Interactive Chart</strong>
+          <p>Price curve with annotated buy &amp; sell markers and tooltip viewpoints.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🌲</div>
+          <strong>Recursion Walkthrough</strong>
+          <p>Step-by-step split &amp; merge cards — see exactly how the algorithm decides.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⚡</div>
+          <strong>Complexity View</strong>
+          <p>O(n log n) vs O(n²) comparison with live division count.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🎯</div>
+          <strong>Buy/Sell Callouts</strong>
+          <p>Rich tooltips on the chart show prices, profit, and context at each marker.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🔢</div>
+          <strong>Merge Logic</strong>
+          <p>Each merge step shows left, right, and cross-profit — winner highlighted.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">📄</div>
+          <strong>Source Viewer</strong>
+          <p>Tabbed code viewer for backend, home page, and output page.</p>
+        </div>
+      </div>
+    </div>
+
+    <form class="form-panel" id="tickerForm">
+      <label for="ticker">Ticker Symbol</label>
+      <input id="ticker" name="ticker" value="AAPL" maxlength="12" autocomplete="off" spellcheck="false">
+      <button type="submit">→ Analyze</button>
+      <p class="hint">No API keys needed — prices are deterministically generated from each symbol so results are consistent and reproducible.</p>
+      <div class="samples">
+        <a class="sample" href="/output?ticker=AAPL">AAPL</a>
+        <a class="sample" href="/output?ticker=TSLA">TSLA</a>
+        <a class="sample" href="/output?ticker=MSFT">MSFT</a>
+        <a class="sample" href="/output?ticker=INFY">INFY</a>
+        <a class="sample" href="/output?ticker=AMZN">AMZN</a>
+        <a class="sample" href="/output?ticker=NVDA">NVDA</a>
+      </div>
+    </form>
+  </div>
+</main>
+<script>
+  document.getElementById("tickerForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const t = document.getElementById("ticker").value.trim() || "DEMO";
+    window.location.href = `/output?ticker=${encodeURIComponent(t)}`;
+  });
+</script>
+</body>
+</html>
